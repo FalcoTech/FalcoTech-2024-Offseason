@@ -7,6 +7,7 @@ package frc.robot.subsystems;
 import java.util.ResourceBundle.Control;
 
 import com.ctre.phoenix6.Orchestra;
+import com.ctre.phoenix6.configs.MotorOutputConfigs;
 import com.ctre.phoenix6.controls.CoastOut;
 import com.ctre.phoenix6.controls.ControlRequest;
 import com.ctre.phoenix6.controls.Follower;
@@ -14,6 +15,8 @@ import com.ctre.phoenix6.controls.MusicTone;
 import com.ctre.phoenix6.controls.StaticBrake;
 import com.ctre.phoenix6.controls.StrictFollower;
 import com.ctre.phoenix6.hardware.TalonFX;
+import com.ctre.phoenix6.signals.InvertedValue;
+import com.ctre.phoenix6.signals.MotorAlignmentValue;
 
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
@@ -26,11 +29,13 @@ public class Shooter extends SubsystemBase {
   /** Creates a new Shooter. */
 
   public Shooter() {
-    leftShootMotor.setInverted(true);
-    leftShootMotor.setControl(new CoastOut());
-    rightShootMotor.setControl(new CoastOut());
-
-    rightShootMotor.setControl(new Follower(leftShootMotor.getDeviceID(), true));
+    // leftShootMotor.setInverted(true);
+    // leftShootMotor.setControl(new CoastOut());
+    // rightShootMotor.setControl(new CoastOut());
+    var talonFXConfiguratorright = leftShootMotor.getConfigurator();
+    var motorConfigsright = new MotorOutputConfigs();
+    motorConfigsright.Inverted = InvertedValue.Clockwise_Positive;
+    rightShootMotor.setControl(new Follower(leftShootMotor.getDeviceID(), MotorAlignmentValue.Opposed));
   }
 
   public void setShooterSpeed(double speed){
