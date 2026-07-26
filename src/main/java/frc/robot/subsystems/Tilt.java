@@ -4,10 +4,13 @@
 
 package frc.robot.subsystems;
 
-import com.revrobotics.CANSparkLowLevel.MotorType;
+import com.revrobotics.spark.SparkLowLevel.MotorType;
 import com.ctre.phoenix6.controls.DutyCycleOut;
-import com.revrobotics.CANSparkMax;
-import com.revrobotics.CANSparkBase.IdleMode;
+import com.revrobotics.spark.SparkMax;
+import com.revrobotics.PersistMode;
+import com.revrobotics.ResetMode;
+import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
+import com.revrobotics.spark.config.SparkMaxConfig;
 
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.interpolation.InterpolatingDoubleTreeMap;
@@ -20,8 +23,8 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants.*;
 
 public class Tilt extends SubsystemBase {
-  private final CANSparkMax leftTiltMotor = new CANSparkMax(TiltConstants.kLeftTiltMotorID, MotorType.kBrushless);
-  private final CANSparkMax rightTiltMotor = new CANSparkMax(TiltConstants.kRightTiltMotorID, MotorType.kBrushless);
+  private final SparkMax leftTiltMotor = new SparkMax(TiltConstants.kLeftTiltMotorID, MotorType.kBrushless);
+  private final SparkMax rightTiltMotor = new SparkMax(TiltConstants.kRightTiltMotorID, MotorType.kBrushless);
 
   private final DutyCycleEncoder tiltEncoder = new DutyCycleEncoder(TiltConstants.kTiltEncoderDIOPort);
 
@@ -33,15 +36,22 @@ public class Tilt extends SubsystemBase {
 
   /** Creates a new Tilt. */
   public Tilt() {
-    leftTiltMotor.setIdleMode(IdleMode.kBrake);
-    rightTiltMotor.setIdleMode(IdleMode.kBrake);
+    SparkMaxConfig leftConfig = new SparkMaxConfig();
+    leftConfig.idleMode(IdleMode.kBrake);
+    leftConfig.inverted(true);
+    leftTiltMotor.configure(leftConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
 
-    leftTiltMotor.setInverted(true);
-    rightTiltMotor.follow(leftTiltMotor, true);
+    SparkMaxConfig rightConfig = new SparkMaxConfig();
+    rightConfig.idleMode(IdleMode.kBrake);
+    rightConfig.follow(leftTiltMotor, true);
+    rightTiltMotor.configure(rightConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
 
     SmartDashboard.putData("Reset Tilt Encoder", new InstantCommand(() -> resetTiltEncoder()).ignoringDisable(true));
     // SmartDashboard.putBoolean("FAST TILT (HANG SPEED)", false);
 
+    // TODO: this map is calibrated to shoot at the 2024 Crescendo speaker specifically
+    // (distance-to-target -> tilt angle). Meaningless outside that game's context - revisit
+    // once this robot's demo/practice purpose is decided.
     tiltMap.put(1.44, .03);
     tiltMap.put(1.6, .03);
     tiltMap.put(1.8, .04);
@@ -62,8 +72,9 @@ public class Tilt extends SubsystemBase {
   }
 
   public double getTiltAngle(){
-    return tiltEncoder.getDistance() + .01;
-    // return tiltEncoder.get();
+    // getDistance() was removed from DutyCycleEncoder; get() returns the same raw rotations
+    // this code always effectively used since distance-per-rotation was never configured.
+    return tiltEncoder.get() + .01;
   }
   public void setTiltToSetpoint(double setpoint){
     double pidOutput = m_tiltPID.calculate(getTiltAngle(), setpoint); 
@@ -81,8 +92,11 @@ public class Tilt extends SubsystemBase {
   }
 
   public void resetTiltEncoder(){
-    tiltEncoder.reset();
-  } 
+    // TODO: DutyCycleEncoder.reset() no longer exists and has no direct replacement in the
+    // 2026 API. This is now a no-op; the "Reset Tilt Encoder" dashboard button does nothing.
+    // Revisit if tilt zeroing is needed again (e.g. re-zero via setAssumedFrequency or a
+    // software offset tracked separately).
+  }
 
   public void toggleHangSpeed(){
     if (HANGSPEED == true){

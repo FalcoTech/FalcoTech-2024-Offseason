@@ -7,10 +7,13 @@ package frc.robot.subsystems.Swerve;
 
 import com.ctre.phoenix6.configs.CANcoderConfiguration;
 import com.ctre.phoenix6.hardware.CANcoder;
-import com.revrobotics.CANSparkMax;
 import com.revrobotics.RelativeEncoder;
-import com.revrobotics.CANSparkBase.IdleMode;
-import com.revrobotics.CANSparkLowLevel.MotorType;
+import com.revrobotics.spark.SparkMax;
+import com.revrobotics.PersistMode;
+import com.revrobotics.ResetMode;
+import com.revrobotics.spark.SparkLowLevel.MotorType;
+import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
+import com.revrobotics.spark.config.SparkMaxConfig;
 
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -24,8 +27,8 @@ import frc.robot.Constants.ModuleConstants;
 public class SwerveModule extends SubsystemBase {
   private final String moduleName;
 
-  private final CANSparkMax driveMotor;
-  private final CANSparkMax turnMotor;
+  private final SparkMax driveMotor;
+  private final SparkMax turnMotor;
   private final boolean driveMotorReversed;
   private final boolean turnMotorReversed;
 
@@ -45,19 +48,25 @@ public class SwerveModule extends SubsystemBase {
     ){
     
     this.moduleName = moduleName;
-        
-    driveMotor = new CANSparkMax(driveMotorID, MotorType.kBrushless);
-    turnMotor = new CANSparkMax(turnMotorID, MotorType.kBrushless);
-    
+
+    driveMotor = new SparkMax(driveMotorID, MotorType.kBrushless);
+    turnMotor = new SparkMax(turnMotorID, MotorType.kBrushless);
+
     this.driveMotorReversed = isDriveMotorReversed;
     this.turnMotorReversed = isTurnMotorReversed;
-    driveMotor.setInverted(driveMotorReversed);
-    turnMotor.setInverted(turnMotorReversed);
-    
-    driveEncoder = driveMotor.getEncoder();
 
-    driveEncoder.setPositionConversionFactor(ModuleConstants.kDriveEncoderRot2Meter); // Encoder ticks to meters
-    driveEncoder.setVelocityConversionFactor(ModuleConstants.kDriveEncoderRPM2MeterPerSec); // Encoder RPM to meters per second
+    SparkMaxConfig driveConfig = new SparkMaxConfig();
+    driveConfig.inverted(driveMotorReversed);
+    driveConfig.encoder
+      .positionConversionFactor(ModuleConstants.kDriveEncoderRot2Meter) // Encoder ticks to meters
+      .velocityConversionFactor(ModuleConstants.kDriveEncoderRPM2MeterPerSec); // Encoder RPM to meters per second
+    driveMotor.configure(driveConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
+
+    SparkMaxConfig turnConfig = new SparkMaxConfig();
+    turnConfig.inverted(turnMotorReversed);
+    turnMotor.configure(turnConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
+
+    driveEncoder = driveMotor.getEncoder();
 
     this.absoluteEncoderOffsetRad = absoluteEncoderOffset; //magnet offset
     this.absoluteEncoderReversed = isAbsoluteEncoderReversed;
@@ -113,15 +122,19 @@ public class SwerveModule extends SubsystemBase {
 
 
   public void brakeMotors(){
-    driveMotor.setIdleMode(IdleMode.kBrake);
-    turnMotor.setIdleMode(IdleMode.kBrake);
+    setIdleMode(IdleMode.kBrake);
   }
   public void coastMotors(){
-    driveMotor.setIdleMode(IdleMode.kCoast);
-    turnMotor.setIdleMode(IdleMode.kCoast);
+    setIdleMode(IdleMode.kCoast);
+  }
+  private void setIdleMode(IdleMode idleMode){
+    SparkMaxConfig config = new SparkMaxConfig();
+    config.idleMode(idleMode);
+    driveMotor.configure(config, ResetMode.kNoResetSafeParameters, PersistMode.kNoPersistParameters);
+    turnMotor.configure(config, ResetMode.kNoResetSafeParameters, PersistMode.kNoPersistParameters);
   }
   public Boolean isBrakeMode(){
-    return driveMotor.getIdleMode() == IdleMode.kBrake;
+    return driveMotor.configAccessor.getIdleMode() == IdleMode.kBrake;
   }
   public void stopMotors(){
     driveMotor.set(0);

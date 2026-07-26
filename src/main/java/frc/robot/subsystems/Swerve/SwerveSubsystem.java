@@ -9,12 +9,16 @@ import org.opencv.core.Mat;
 
 import com.ctre.phoenix6.hardware.Pigeon2;
 import com.pathplanner.lib.auto.AutoBuilder;
-import com.pathplanner.lib.util.HolonomicPathFollowerConfig;
-import com.pathplanner.lib.util.PIDConstants;
-import com.pathplanner.lib.util.ReplanningConfig;
+import com.pathplanner.lib.config.ModuleConfig;
+import com.pathplanner.lib.config.PIDConstants;
+import com.pathplanner.lib.config.RobotConfig;
+import com.pathplanner.lib.controllers.PPHolonomicDriveController;
+
+import edu.wpi.first.math.system.plant.DCMotor;
 
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveDriveOdometry;
@@ -31,6 +35,7 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants.DriveChassisConstants;
+import frc.robot.Constants.ModuleConstants;
 import frc.robot.Constants.SwerveDriveConstants;
 
 public class SwerveSubsystem extends SubsystemBase {
@@ -126,20 +131,38 @@ public class SwerveSubsystem extends SubsystemBase {
       }
     });
 
+    // TODO: this RobotConfig is a placeholder (mass/MOI/wheel COF/current limit are guesses,
+    // not measured). Re-export the real values from the PathPlanner GUI
+    // (src/main/deploy/pathplanner/settings.json) once this robot's actual mass is known, and
+    // switch this back to RobotConfig.fromGUISettings().
+    RobotConfig placeholderRobotConfig = new RobotConfig(
+      54.0, // robot mass (kg) - TODO: not measured, placeholder
+      6.0, // robot MOI (kg*m^2) - TODO: not measured, placeholder
+      new ModuleConfig(
+        ModuleConstants.kWheelDiaMeterMeters / 2, // wheel radius (m)
+        SwerveDriveConstants.kMaxSpeedMetersPerSecond, // max module speed (m/s)
+        1.0, // wheel coefficient of friction - TODO: not measured, placeholder
+        DCMotor.getNEO(1), // drive motor
+        60.0, // drive current limit (amps) - TODO: not confirmed against real breaker/config
+        1 // motors per module
+      ),
+      new Translation2d(SwerveDriveConstants.kWheelBase / 2, SwerveDriveConstants.kTrackWidth / 2), // front left
+      new Translation2d(SwerveDriveConstants.kWheelBase / 2, -SwerveDriveConstants.kTrackWidth / 2), // front right
+      new Translation2d(-SwerveDriveConstants.kWheelBase / 2, SwerveDriveConstants.kTrackWidth / 2), // back left
+      new Translation2d(-SwerveDriveConstants.kWheelBase / 2, -SwerveDriveConstants.kTrackWidth / 2) // back right
+    );
+
     //Configure autobuilder last
-    AutoBuilder.configureHolonomic(
+    AutoBuilder.configure(
       this::getPose2d, //Position supplier
       this::resetPose, //reset position
       this::getChassisSpeeds, //robot chassisspeeds supplier
-      this::swerveDriveChassisSpeedsConsumer, //chassisspeeds consumer (command to drive robot) 
-      new HolonomicPathFollowerConfig(
+      this::swerveDriveChassisSpeedsConsumer, //chassisspeeds consumer (command to drive robot)
+      new PPHolonomicDriveController(
         new PIDConstants(1.7, 0.0, 0.0), // robot translation PID
-        new PIDConstants(.3, 0.0, 0.0), // robot rotation PID
-        SwerveDriveConstants.kMaxSpeedMetersPerSecond, //max swerve module speed (m/s)
-        .59, //drivebase radius
-        new ReplanningConfig() 
-        
-      ), 
+        new PIDConstants(.3, 0.0, 0.0) // robot rotation PID
+      ),
+      placeholderRobotConfig,
       () -> {
         //mirror auto path for red side
         var alliance = DriverStation.getAlliance();
@@ -153,8 +176,8 @@ public class SwerveSubsystem extends SubsystemBase {
 
   public double getGyroHeading(){
     // return Math.IEEEremainder(-gyro.getGyroAngleZ(), 360);
-    return Math.IEEEremainder(-pidgy.getAngle(), 360);
-
+    // Pigeon2.getAngle() was removed; getYaw() is the StatusSignal-based replacement.
+    return Math.IEEEremainder(-pidgy.getYaw().refresh().getValueAsDouble(), 360);
   }
   public Rotation2d getGyroRotation2d(){
     return Rotation2d.fromDegrees(getGyroHeading());
