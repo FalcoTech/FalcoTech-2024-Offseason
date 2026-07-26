@@ -61,11 +61,29 @@ is decided in more detail.
    robot's real mass/MOI/module layout until someone re-exports it from the
    PathPlanner GUI.
 
-4. **Phoenix5 (`VictorSPX`) and Phoenix6 (`TalonFX`, `Pigeon2`, `CANcoder`,
-   `Orchestra`, `Follower`) usage appears to already match the current API**
-   (confirmed the `Follower(int, MotorAlignmentValue)` constructor used in
-   `Shooter.java` is the current 2026 signature, not a leftover). These will
-   be verified by compiling rather than assumed fixed.
+4. **Phoenix5 (`VictorSPX`) and Phoenix6 `TalonFX`/`Orchestra`/`Follower`
+   usage already matches the current API** (confirmed the
+   `Follower(int, MotorAlignmentValue)` constructor used in `Shooter.java` is
+   the current 2026 signature, not a leftover) — verified by compiling, not
+   assumed.
+
+5. **WPILib-core and Phoenix6 sensor APIs also changed**, found only by
+   compiling against the real jars rather than reading migration docs:
+   - `Pigeon2.getAngle()` (used in `SwerveSubsystem.getGyroHeading()`) no
+     longer exists. `CorePigeon2.getYaw()` — a `StatusSignal<Angle>`, the
+     same pattern already used elsewhere in this file for `CANcoder` — is the
+     direct replacement (`pidgy.getYaw().refresh().getValueAsDouble()`).
+   - `DutyCycleEncoder.getDistance()` (used in `Tilt.getTiltAngle()`) no
+     longer exists; `get()` is the replacement. Since this code never called
+     the old `setDistancePerRotation()`, `getDistance()` was numerically
+     identical to `get()` (rotations, unscaled) — so swapping the method name
+     preserves behavior exactly.
+   - `DutyCycleEncoder.reset()` (used in `Tilt.resetTiltEncoder()`) was
+     removed with **no replacement** in the current API. Per the "leave
+     comments on things that don't make sense out of context of a match"
+     approach, this becomes a no-op with a TODO rather than an invented
+     substitute — the "Reset Tilt Encoder" dashboard button currently does
+     nothing.
 
 ## Design
 
@@ -77,11 +95,15 @@ deletion). Leave `PathplannerLib.json` (duplicate/older), `Phoenix6.json`, and
 ### 2. REVLib migration (`SwerveModule.java`, `Tilt.java`)
 Mechanical rename `CANSparkMax` → `SparkMax`; replace direct setter calls
 (`setInverted`, `setIdleMode`, `driveEncoder.setPositionConversionFactor`,
-etc.) with an equivalent `SparkMaxConfig`, applied once via
+etc.) with an equivalent `SparkMaxConfig`, applied via
 `motor.configure(config, ResetMode.kResetSafeParameters,
-PersistMode.kPersistParameters)`. `follow()` remains a direct instance call.
+PersistMode.kPersistParameters)`. Use the top-level `com.revrobotics.ResetMode`
+/ `com.revrobotics.PersistMode` enums, not the `SparkBase`-nested ones — both
+exist and both compile, but the nested ones are deprecated-for-removal.
+Following is also config-only now: `rightConfig.follow(leftMotor, true)`
+replaces the old direct `rightMotor.follow(leftMotor, true)` instance call.
 No behavioral change — same idle modes, same inversions, same conversion
-factors, same PID values.
+factors, same PID values, same follower-invert relationship.
 
 ### 3. PathPlannerLib migration (`SwerveSubsystem.java`)
 Replace `AutoBuilder.configureHolonomic(...)` with `AutoBuilder.configure(...)`
@@ -93,10 +115,16 @@ re-export from the PathPlanner GUI. `RobotContainer.java`'s
 needs no code changes — only marked with TODOs where the names are
 2024-game-specific (e.g. `"Shoot Speaker"`, `"Tilt To Amp"`).
 
-### 4. Compile-and-verify the rest
-`Intake.java` (Phoenix5) and `Shooter.java` (Phoenix6) are expected to need no
-changes. Confirmed by building, not assumed — if `./gradlew compileJava`
-surfaces errors here, fix only what the compiler flags.
+### 4. Sensor/gyro API fixes (`SwerveSubsystem.java`, `Tilt.java`)
+`pidgy.getAngle()` → `pidgy.getYaw().refresh().getValueAsDouble()` (same sign,
+same continuous-degrees value, matching the `StatusSignal` pattern already
+used for `CANcoder` in this file). `tiltEncoder.getDistance()` → `get()`
+(numerically identical here, since distance-per-rotation was never
+configured). `tiltEncoder.reset()` has no replacement — turned into a no-op
+with a TODO rather than an invented substitute.
+
+`Intake.java` (Phoenix5) and `Shooter.java` (Phoenix6 `TalonFX`/`Follower`)
+needed no changes — confirmed by building, not assumed.
 
 ### 5. TODO-comment pass
 After a clean build, one pass through the changed/reviewed files adding
@@ -108,10 +136,13 @@ placeholder `RobotConfig` from step 3.
 
 ## Verification
 
-`./gradlew compileJava` (network access to CTRE/REV/PathPlanner Maven repos is
-available from this environment) run after each subsystem's migration, so
-each step is confirmed against the real 2026 vendor JARs rather than docs
-alone. A final `./gradlew build` confirms the whole project, including tests.
+`./gradlew compileJava` was run after each subsystem's migration (network
+access to CTRE/REV/PathPlanner Maven repos is available from this
+environment), confirming each step against the real 2026 vendor JARs rather
+than docs alone — this is how the sensor API breaks in root cause 5 were
+actually found, after web searches and doc fetches gave inconsistent or
+incomplete answers. `./gradlew build` (full build, including the `test` task)
+passes with **BUILD SUCCESSFUL** as of this writing.
 
 ## Testing
 
