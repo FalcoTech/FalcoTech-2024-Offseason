@@ -9,6 +9,9 @@ import frc.robot.RobotContainer;
 import frc.robot.subsystems.Tilt;
 import frc.robot.subsystems.Vision;
 
+// TODO: this command aims at the 2024 Crescendo speaker specifically (via Tilt's tiltMap, which
+// is calibrated to that target's height/geometry). Meaningless outside that game's context -
+// revisit once this robot's demo/practice purpose is decided.
 public class TiltAimToSpeaker extends Command {
   private final Tilt m_tiltSubsystem = RobotContainer.m_tiltSubsystem;
   private final Vision m_visionSubsystem = RobotContainer.m_visionSubsystem;

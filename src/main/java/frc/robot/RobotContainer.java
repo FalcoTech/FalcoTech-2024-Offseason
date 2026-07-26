@@ -93,6 +93,9 @@ public class RobotContainer {
 
 
 
+  // TODO: these bindings target 2024 Crescendo scoring (speaker/amp/note handling) and don't
+  // make sense outside the context of that match anymore. Revisit once this robot's demo/practice
+  // purpose is decided.
   private void configureCoPilotBindings(){
     m_intakeSubsystem.setDefaultCommand(new RunIntake((() -> (CoPilot.getRightTriggerAxis() - CoPilot.getLeftTriggerAxis()))));
 
@@ -115,6 +118,9 @@ public class RobotContainer {
   }
 
 
+  // TODO: named commands and the "Amp Auto" chooser option below are all 2024 Crescendo auto
+  // routines (speaker/amp/note scoring). They still work, but are meaningless outside that game
+  // and should be replaced with routines that make sense for this robot's demo/practice purpose.
   private void registerNamedCommands(){
     //SWERVE
     NamedCommands.registerCommand("Lock Wheels", new LockWheels());
