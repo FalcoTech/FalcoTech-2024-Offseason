@@ -29,12 +29,15 @@ public class Shooter extends SubsystemBase {
   /** Creates a new Shooter. */
 
   public Shooter() {
-    // leftShootMotor.setInverted(true);
-    // leftShootMotor.setControl(new CoastOut());
-    // rightShootMotor.setControl(new CoastOut());
-    var talonFXConfiguratorright = leftShootMotor.getConfigurator();
-    var motorConfigsright = new MotorOutputConfigs();
-    motorConfigsright.Inverted = InvertedValue.Clockwise_Positive;
+    // TalonFX has no setInverted(boolean) in the current Phoenix6 API; inversion is set via
+    // config instead. Clockwise_Positive is the equivalent of the old setInverted(true).
+    var leftMotorConfigs = new MotorOutputConfigs();
+    leftMotorConfigs.Inverted = InvertedValue.Clockwise_Positive;
+    leftShootMotor.getConfigurator().apply(leftMotorConfigs);
+
+    leftShootMotor.setControl(new CoastOut());
+    rightShootMotor.setControl(new CoastOut());
+
     rightShootMotor.setControl(new Follower(leftShootMotor.getDeviceID(), MotorAlignmentValue.Opposed));
   }
 
