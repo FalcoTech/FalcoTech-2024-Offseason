@@ -12,6 +12,7 @@ import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.Constants.OperatorConstants;
@@ -70,6 +71,7 @@ public class RobotContainer {
     configureSmartDashboard();
   }
 
+  new Trigger(Pilot.get)
   // new Trigger(() -> OPERATOR.GETSOMEBUTTON()).onTrue(new COMMAND(ARGUMENTS)); //Template for creating a new command binding
   private void configurePilotBindings() {
     m_swerveSubsystem.setDefaultCommand(new TeleOpDrive( 
@@ -79,16 +81,18 @@ public class RobotContainer {
       () -> -Pilot.getRightX(),
       () -> Pilot.getLeftBumper(), //Slow Speed
       () -> !Pilot.getRightBumper(), //Field Relative
-      () -> Pilot.getXButton())); //Vision Align
+      () -> Pilot.getXButton(), //Vision Align
+      () -> CoPilot.getLeftStickButton())); 
 
     new Trigger(() -> Pilot.getStartButton()).onTrue(new InstantCommand(() -> m_swerveSubsystem.zeroGyro())); //XBOX CONTROLLER
     // new Trigger(() -> Pilot.getAButton()).onTrue(new InstantCommand(() -> m_swerveSubsystem.brakeModules())); //XBOX CONTROLLER
     // new Trigger(() -> Pilot.getBButton()).onTrue(new InstantCommand(() -> m_swerveSubsystem.coastModules())); //XBOX CONTROLLER
     new Trigger(() -> Pilot.getAButton()).onTrue(new InstantCommand(() -> m_swerveSubsystem.switchIdleMode())); //XBOX CONTROLLER
-
+    new Trigger(() -> Pilot.getLeftBumperButton()).onTrue(new InstantCommand(() -> m_swerveSubsystem.brakeModules())); //XBOX CONTROLLER
     
     new Trigger(() -> Pilot.getYButton()).whileTrue(new LockWheels()); //XBOX
     // new Trigger(() -> Pilot.getTriangleButton()).whileTrue(new SwerveLockWheels()); //PS4
+    //TODO: make trigger for leftstick click.
   }
 
 
@@ -113,7 +117,6 @@ public class RobotContainer {
 
     new Trigger(() -> CoPilot.getBButton()).whileTrue(new RunShooter(.7)); 
     new Trigger(() -> CoPilot.getAButton()).whileTrue(new RunShooter(.35)); 
-
     //Multiple commands can be bound to the same button using command groups
   }
 

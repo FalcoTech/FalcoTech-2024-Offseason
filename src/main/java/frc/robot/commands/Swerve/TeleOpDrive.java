@@ -29,12 +29,14 @@ public class TeleOpDrive extends Command {
   private final SlewRateLimiter xLimiter, yLimiter, rotLimiter;
 
   private final PIDController m_visionRotationPID = new PIDController(.075, 0, 0);
+  private boolean kidMode = false;
+  private double kidSpeed;
 
   /** Creates a new SwerveJoystickCommand */
   public TeleOpDrive( 
       Supplier<Double> xSpdFB, Supplier<Double> ySpdLR, Supplier<Double> rotSpd,
       Supplier<Boolean> slowSpeed,
-      Supplier<Boolean> fieldRelative, Supplier<Boolean> alignRobot) {
+      Supplier<Boolean> fieldRelative, Supplier<Boolean> alignRobot, Supplier<Boolean> kidModeSupplier) {
     // Use addRequirements() here to declare subsystem dependencies.
     
     this.xSpdFunction = xSpdFB;
@@ -43,6 +45,10 @@ public class TeleOpDrive extends Command {
     this.slowSpdFunction = slowSpeed;
     this.fieldRelativeFunction = fieldRelative;
     this.alignFunction = alignRobot;
+
+    kidMode = kidModeSupplier.get();
+    
+    kidSpeed = 0.25;
 
     this.xLimiter = new SlewRateLimiter(SwerveDriveConstants.kTeleopDriveMaxAccelerationUnitsPerSecond);
     this.yLimiter = new SlewRateLimiter(SwerveDriveConstants.kTeleopDriveMaxAccelerationUnitsPerSecond); //Dampen the acceleration
@@ -65,6 +71,12 @@ public class TeleOpDrive extends Command {
     double rotSpeed = (rotSpdFunction.get() * (slowSpdFunction.get() || alignFunction.get() ? SwerveDriveConstants.kTeleopTurnSlowSpeedScale : 1)) * SwerveDriveConstants.kTeleopTurnSpeedScale;
     // Calculate the rotation speed from the triggers and the joystick (will use 1 if you try to hyperdrive) 
 
+    if (kidMode)
+    {
+     ySpeed = kidSpeed * ySpeed;
+     xSpeed = kidSpeed * xSpeed;
+     rotSpeed = kidSpeed * rotSpeed;
+    }
     // Apply a deadband to the x, y, and rotation speeds
     xSpeed = Math.abs(xSpeed) > OperatorConstants.kPilotDeadband ? xSpeed : 0;
     ySpeed = Math.abs(ySpeed) > OperatorConstants.kPilotDeadband ? ySpeed : 0; 
