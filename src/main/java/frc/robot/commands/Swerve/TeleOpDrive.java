@@ -11,6 +11,7 @@ import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.Constants.SwerveDriveConstants;
 import frc.robot.RobotContainer;
@@ -97,6 +98,11 @@ public class TeleOpDrive extends Command {
      xSpeed = kidSpeed * xSpeed;
      rotSpeed = kidSpeed * rotSpeed;
     }
+
+    SmartDashboard.putBoolean("TeleOpDrive Kid Mode", kidMode.getAsBoolean());
+    SmartDashboard.putNumber("TeleOpDrive Commanded X", xSpeed);
+    SmartDashboard.putNumber("TeleOpDrive Commanded Y", ySpeed);
+    SmartDashboard.putNumber("TeleOpDrive Commanded Rot", rotSpeed);
 
     // Create a speed command to send to the drivetrain
     ChassisSpeeds chassisSpeeds;
