@@ -4,6 +4,7 @@
 
 package frc.robot.commands.Swerve;
 
+import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 
 import edu.wpi.first.math.controller.PIDController;
@@ -29,14 +30,14 @@ public class TeleOpDrive extends Command {
   private final SlewRateLimiter xLimiter, yLimiter, rotLimiter;
 
   private final PIDController m_visionRotationPID = new PIDController(.075, 0, 0);
-  private boolean kidMode = false;
-  private double kidSpeed;
+  private BooleanSupplier kidMode = () -> true;
+  private double kidSpeed = SwerveDriveConstants.kKidModeSpeedScale;;
 
   /** Creates a new SwerveJoystickCommand */
   public TeleOpDrive( 
       Supplier<Double> xSpdFB, Supplier<Double> ySpdLR, Supplier<Double> rotSpd,
       Supplier<Boolean> slowSpeed,
-      Supplier<Boolean> fieldRelative, Supplier<Boolean> alignRobot, Supplier<Boolean> kidModeSupplier) {
+      Supplier<Boolean> fieldRelative, Supplier<Boolean> alignRobot, BooleanSupplier kidMode) {
     // Use addRequirements() here to declare subsystem dependencies.
     
     this.xSpdFunction = xSpdFB;
@@ -46,9 +47,7 @@ public class TeleOpDrive extends Command {
     this.fieldRelativeFunction = fieldRelative;
     this.alignFunction = alignRobot;
 
-    kidMode = kidModeSupplier.get();
-    
-    kidSpeed = 0.25;
+    this.kidMode = kidMode;
 
     this.xLimiter = new SlewRateLimiter(SwerveDriveConstants.kTeleopDriveMaxAccelerationUnitsPerSecond);
     this.yLimiter = new SlewRateLimiter(SwerveDriveConstants.kTeleopDriveMaxAccelerationUnitsPerSecond); //Dampen the acceleration
@@ -71,12 +70,7 @@ public class TeleOpDrive extends Command {
     double rotSpeed = (rotSpdFunction.get() * (slowSpdFunction.get() || alignFunction.get() ? SwerveDriveConstants.kTeleopTurnSlowSpeedScale : 1)) * SwerveDriveConstants.kTeleopTurnSpeedScale;
     // Calculate the rotation speed from the triggers and the joystick (will use 1 if you try to hyperdrive) 
 
-    if (kidMode)
-    {
-     ySpeed = kidSpeed * ySpeed;
-     xSpeed = kidSpeed * xSpeed;
-     rotSpeed = kidSpeed * rotSpeed;
-    }
+  
     // Apply a deadband to the x, y, and rotation speeds
     xSpeed = Math.abs(xSpeed) > OperatorConstants.kPilotDeadband ? xSpeed : 0;
     ySpeed = Math.abs(ySpeed) > OperatorConstants.kPilotDeadband ? ySpeed : 0; 
@@ -94,6 +88,14 @@ public class TeleOpDrive extends Command {
 
       double alignCommanded = Math.min((rotSpeed + alignSpeed), 1);
       rotSpeed = alignCommanded;
+    }
+
+    // If kid mode is enabled, scale the speeds down
+    if (kidMode.getAsBoolean())
+    {
+     ySpeed = kidSpeed * ySpeed;
+     xSpeed = kidSpeed * xSpeed;
+     rotSpeed = kidSpeed * rotSpeed;
     }
 
     // Create a speed command to send to the drivetrain

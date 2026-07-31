@@ -58,6 +58,7 @@ public class RobotContainer {
 
   // The chooser for the autonomous routines
   SendableChooser<Command> m_autoChooser = new SendableChooser<>();
+  private boolean kidMode = true;
      
   public RobotContainer() {
     // Pathplanner Warning:
@@ -71,7 +72,6 @@ public class RobotContainer {
     configureSmartDashboard();
   }
 
-  new Trigger(Pilot.get)
   // new Trigger(() -> OPERATOR.GETSOMEBUTTON()).onTrue(new COMMAND(ARGUMENTS)); //Template for creating a new command binding
   private void configurePilotBindings() {
     m_swerveSubsystem.setDefaultCommand(new TeleOpDrive( 
@@ -82,17 +82,15 @@ public class RobotContainer {
       () -> Pilot.getLeftBumper(), //Slow Speed
       () -> !Pilot.getRightBumper(), //Field Relative
       () -> Pilot.getXButton(), //Vision Align
-      () -> CoPilot.getLeftStickButton())); 
+      () -> kidMode)); 
 
     new Trigger(() -> Pilot.getStartButton()).onTrue(new InstantCommand(() -> m_swerveSubsystem.zeroGyro())); //XBOX CONTROLLER
     // new Trigger(() -> Pilot.getAButton()).onTrue(new InstantCommand(() -> m_swerveSubsystem.brakeModules())); //XBOX CONTROLLER
     // new Trigger(() -> Pilot.getBButton()).onTrue(new InstantCommand(() -> m_swerveSubsystem.coastModules())); //XBOX CONTROLLER
     new Trigger(() -> Pilot.getAButton()).onTrue(new InstantCommand(() -> m_swerveSubsystem.switchIdleMode())); //XBOX CONTROLLER
-    new Trigger(() -> Pilot.getLeftBumperButton()).onTrue(new InstantCommand(() -> m_swerveSubsystem.brakeModules())); //XBOX CONTROLLER
     
     new Trigger(() -> Pilot.getYButton()).whileTrue(new LockWheels()); //XBOX
     // new Trigger(() -> Pilot.getTriangleButton()).whileTrue(new SwerveLockWheels()); //PS4
-    //TODO: make trigger for leftstick click.
   }
 
 
@@ -118,6 +116,7 @@ public class RobotContainer {
     new Trigger(() -> CoPilot.getBButton()).whileTrue(new RunShooter(.7)); 
     new Trigger(() -> CoPilot.getAButton()).whileTrue(new RunShooter(.35)); 
     //Multiple commands can be bound to the same button using command groups
+    new Trigger(() -> CoPilot.getLeftStickButton()).onTrue(new InstantCommand(() -> kidMode = !kidMode)); //XBOX CONTROLLER
   }
 
 
